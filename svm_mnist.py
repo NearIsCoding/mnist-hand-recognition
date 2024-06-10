@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
+import pickle
 
 print("Loading data...")
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
@@ -35,3 +36,8 @@ y_pred = svm_model.predict(x_test)
 accuracy = accuracy_score(y_test, y_pred)
 print("Accuracy: ", accuracy)
 
+# save model
+print("Saving model...")
+filename = "svm_model.pickle"
+pickle.dump(svm_model, open(filename, "wb"))
+print("Model succesfully saved!!!")

@@ -9,6 +9,8 @@ __pycache__/
 # Images
 *.jpg
 
+# Pickle Models
+*.pickle
 
 # Distribution / packaging
 .Python
