@@ -2,6 +2,63 @@ import cv2
 import mediapipe as mp
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.svm import SVC
+import pickle
+from PIL import Image
+
+filename = "svm_model.pickle"
+
+# Load model from sklearn with pickle
+print("Loading model...")
+svm_model = pickle.load(open(filename, "rb"))
+print("Model succesfully loaded!!!")
+
+img_saved = False
+image_path = 'image.png'
+
+def preprocess_image(image_path, threshold=0.01):
+    image = Image.open(image_path)
+    # Resize to 28x28 pixels
+    image = image.resize((28, 28))
+    # Convert to grayscale
+    image = image.convert('L')
+    # Normalize and binarize the image using the specified threshold
+    image = np.asarray(image)
+    image = image.astype('float32') / 255.0
+    binarized_image = (image > threshold).astype(np.float32)
+    # Flatten the image
+    extended_image = extend_image(binarized_image)
+    flattened_image = extended_image.flatten()
+    # Reshape to match the input shape of the SVM model
+    flattened_image = flattened_image.reshape(1, -1)
+    return flattened_image
+
+def extend_image(binarized_image):
+    extended_image = np.copy(binarized_image)
+
+    # Up
+    shift_up = np.zeros_like(binarized_image)
+    shift_up[:-1, :] = binarized_image[1:, :]
+
+    # Down
+    shift_down = np.zeros_like(binarized_image)
+    shift_down[1:, :] = binarized_image[:-1, :]
+
+    # Left
+    shift_left = np.zeros_like(binarized_image)
+    shift_left[:, :-1] = binarized_image[:, 1:]
+
+    # Right
+    shift_right = np.zeros_like(binarized_image)
+    shift_right[:, 1:] = binarized_image[:, :-1]
+
+    extended_image = np.maximum(extended_image, shift_up)
+    extended_image = np.maximum(extended_image, shift_down)
+    extended_image = np.maximum(extended_image, shift_left)
+    extended_image = np.maximum(extended_image, shift_right)
+    
+    return extended_image
+
 
 # Inicializar MediaPipe Hands
 mp_hands = mp.solutions.hands
@@ -66,14 +123,22 @@ while cap.isOpened():
                         plt.figure()
                         plt.imshow(matrix, cmap='gray')
                         plt.axis('off')  # Oculta los ejes
-                        plt.savefig('image.png', bbox_inches='tight', pad_inches=0)  # Guarda la imagen
+                        plt.savefig(image_path, bbox_inches='tight', pad_inches=0)  # Guarda la imagen
                         plt.show()
+                        img_saved = True
                     
                     index_finger_positions.clear()
                     is_index_finger_up = False
 
     # Mostrar la imagen
     cv2.imshow('Hand Detector', frame)
+
+
+    if (img_saved):
+        preprocessed_image = preprocess_image(image_path)
+        predicted_digit = svm_model.predict(preprocessed_image)
+        print("Predicted Digit: ", predicted_digit)
+        img_saved = False
 
     # Salir del loop al presionar la tecla 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
